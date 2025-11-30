@@ -85,7 +85,7 @@ public class DataSeedingService {
         // 3. Crear Usuario Web (Login: 1234)
         UsuarioWeb u = new UsuarioWeb();
         u.setClienteIdCore(clienteId);
-        u.setUsername(username);
+        u.setUsuario(username);
         u.setPassword(passwordEncoder.encode("1234")); // Todos con clave 1234 para probar fácil
         u.setEmail(email);
         u.setEstado("ACTIVO");

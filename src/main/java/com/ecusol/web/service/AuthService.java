@@ -22,7 +22,7 @@ public class AuthService {
 
     public String login(LoginRequest req) {
         // Nota: req.getUsuario() o req.usuario() según tu DTO. Asumimos clase Lombok.
-        UsuarioWeb user = usuarioRepo.findByUsername(req.getUsuario())
+        UsuarioWeb user = usuarioRepo.findByUsuario(req.getUsuario())
                 .orElseThrow(() -> new RuntimeException("Credenciales incorrectas"));
 
         if (!passwordEncoder.matches(req.getPassword(), user.getPassword())) {
@@ -51,14 +51,14 @@ public class AuthService {
         usuarioRepo.save(user);
 
         return tokenProvider.createToken(
-                user.getUsername(),
+                user.getUsuario(),
                 user.getUsuarioWebId(),
                 user.getClienteIdCore()
         );
     }
 
     public void registrar(RegisterRequest req) {
-        if (usuarioRepo.existsByUsername(req.usuario())) {
+        if (usuarioRepo.existsByUsuario(req.usuario())) {
             throw new RuntimeException("El usuario ya existe");
         }
 
@@ -79,7 +79,7 @@ public class AuthService {
         }
 
         UsuarioWeb u = new UsuarioWeb();
-        u.setUsername(req.usuario());
+        u.setUsuario(req.usuario());
         u.setPassword(passwordEncoder.encode(req.password()));
         u.setEmail(req.email());
         u.setClienteIdCore(idCoreGenerado);

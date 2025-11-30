@@ -6,36 +6,36 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "usuario_web", schema = "ecusol_web")
+@Table(name = "usuarioweb", schema = "ecusol_web")
 @Data
 public class UsuarioWeb {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "usuario_web_id")
+    @Column(name = "usuariowebid")
     private Integer usuarioWebId;
 
-    @Column(name = "cliente_id_core", nullable = false)
+    @Column(name = "clienteidcore", nullable = false)
     private Integer clienteIdCore;
 
-    @Column(nullable = false, unique = true)
-    private String username;
+    @Column(name = "usuario" ,nullable = false, unique = true)
+    private String usuario;
 
-    @Column(name = "password_hash", nullable = false)
+    @Column(name = "contrasenahash", nullable = false)
     private String password;
 
-    @Column(name = "email_contacto", nullable = false)
+    @Column(name = "emailcontacto", nullable = false)
     private String email;
 
     @Column(nullable = false)
     private String estado;
 
-    @Column(name = "intentos_fallidos")
+    @Column(name = "intentosfallidos")
     private Integer intentosFallidos;
 
-    @Column(name = "ultimo_acceso")
+    @Column(name = "ultimoacceso")
     private LocalDateTime ultimoAcceso;
 
-    @Column(name = "fecha_registro")
+    @Column(name = "fecharegistro")
     private LocalDateTime fechaRegistro;
 }

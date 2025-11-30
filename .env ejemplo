@@ -1,0 +1,7 @@
+SERVER_PORT=8082  # OJO: Usa 8082 u otro puerto si el 8081 sigue ocupado por el Core local
+ECUSOL_CORE_URL=https://backend-core-ecusol.onrender.com
+
+# Base de datos (La misma URL directa de Neon, pero cambia el esquema)
+SPRING_DATASOURCE_URL=jdbc:postgresql://ep-still-firefly-ahhj35f3.c-3.us-east-1.aws.neon.tech:5432/neondb?sslmode=require&currentSchema=ecusol_web
+SPRING_DATASOURCE_USERNAME=neondb_owner
+SPRING_DATASOURCE_PASSWORD=npg_mw4Ln6Ncbqhz

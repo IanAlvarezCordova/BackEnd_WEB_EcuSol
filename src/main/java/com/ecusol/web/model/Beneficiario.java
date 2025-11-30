@@ -12,28 +12,25 @@ public class Beneficiario {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "beneficiario_id") // SQL: beneficiario_id (snake_case)
+    @Column(name = "beneficiarioid") // SQL: beneficiario_id (snake_case)
     private Integer beneficiarioId;
 
     @ManyToOne(fetch = FetchType.LAZY) // Lazy para evitar logs gigantes
-    @JoinColumn(name = "usuario_web_id", nullable = false) // SQL: usuario_web_id
+    @JoinColumn(name = "usuariowebid", nullable = false) // SQL: usuario_web_id
     private UsuarioWeb usuarioWeb;
 
-    @Column(name = "numero_cuenta_destino", nullable = false)
+    @Column(name = "numerocuentadestino", nullable = false)
     private String numeroCuentaDestino;
 
-    @Column(name = "nombre_titular", nullable = false)
+    @Column(name = "nombretitular", nullable = false)
     private String nombreTitular;
 
-    @Column(name = "tipo_cuenta") // Agregado para integridad
+    @Column(name = "tipocuenta") // Agregado para integridad
     private String tipoCuenta;
 
     @Column(name = "alias")
     private String alias;
 
-    @Column(name = "email_notificacion")
-    private String emailNotificacion;
-
-    @Column(name = "fecha_registro")
+    @Column(name = "fecharegistro")
     private LocalDateTime fechaRegistro;
 }

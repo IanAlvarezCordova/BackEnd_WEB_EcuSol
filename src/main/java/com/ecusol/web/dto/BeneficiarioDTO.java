@@ -6,6 +6,5 @@ public record BeneficiarioDTO(
         String numeroCuenta,
         String nombreTitular,
         String alias,
-        String email,
         String tipoCuenta // <--- Agregar
 ) {}

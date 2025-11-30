@@ -79,7 +79,6 @@ public class BancaWebService {
         b.setNumeroCuentaDestino(dto.numeroCuenta());
         b.setNombreTitular(dto.nombreTitular());
         b.setAlias(dto.alias());
-        b.setEmailNotificacion(dto.email());
 
         // Guardar Tipo de Cuenta correctamente
         b.setTipoCuenta(dto.tipoCuenta() != null ? dto.tipoCuenta() : "Desconocido");
@@ -95,7 +94,6 @@ public class BancaWebService {
                         b.getNumeroCuentaDestino(),
                         b.getNombreTitular(),
                         b.getAlias(),
-                        b.getEmailNotificacion(),
                         b.getTipoCuenta()
                 ))
                 .collect(Collectors.toList());
