@@ -1,4 +1,3 @@
-//ubi: src/main/java/com/ecusol/web/controller/BancaWebController.java
 package com.ecusol.web.controller;
 
 import com.ecusol.web.config.JwtTokenProvider;
@@ -10,12 +9,14 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/web")
+@RequestMapping("/api/v1/web")
 @CrossOrigin(origins = "*")
 public class BancaWebController {
 
-    @Autowired private BancaWebService bankingService;
-    @Autowired private JwtTokenProvider jwtTokenProvider;
+    @Autowired 
+    private BancaWebService bankingService;
+    @Autowired 
+    private JwtTokenProvider jwtTokenProvider;
 
     private Integer getClienteIdCore(String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) throw new RuntimeException("Token inválido");
@@ -39,29 +40,26 @@ public class BancaWebController {
         return bankingService.misMovimientos(numeroCuenta);
     }
 
-    @PostMapping("/transferir")
+    @PostMapping("/transferencias")
     public String transferir(@RequestBody TransferenciaRequest req) {
         return bankingService.transferir(req);
     }
 
-    @PostMapping("/solicitar-cuenta")
+    @PostMapping("/cuentas/solicitudes")
     public ResponseEntity<String> solicitarCuenta(@RequestHeader("Authorization") String token, @RequestParam Integer tipoCuentaId) {
         bankingService.solicitarCuenta(getClienteIdCore(token), tipoCuentaId);
         return ResponseEntity.ok("Cuenta creada exitosamente");
     }
 
-    // --- CORRECCIÓN ---
-    @GetMapping("/validar-destinatario/{numero}")
-    public DestinatarioDTO validar(@PathVariable String numero) {
-        // Ahora recibimos el objeto completo del servicio
+    @GetMapping("/cuentas/{numero}/titular")
+    public DestinatarioDTO obtenerTitular(@PathVariable String numero) {
         TitularCuentaDTO titular = bankingService.validarDestinatarioCompleto(numero);
 
-        // Y lo transformamos al DTO del Front con todos los datos
         return new DestinatarioDTO(
                 titular.getNumeroCuenta(),
                 titular.getNombreCompleto(),
                 titular.getIdentificacionParcial(),
-                titular.getTipoCuenta() // <--- ¡Ahora sí viaja!
+                titular.getTipoCuenta()
         );
     }
 

@@ -1,4 +1,3 @@
-//ubi: src/main/java/com/ecusol/web/service/BancaWebService.java
 package com.ecusol.web.service;
 
 import com.ecusol.web.client.CoreBancarioClient;
@@ -8,52 +7,102 @@ import com.ecusol.web.model.UsuarioWeb;
 import com.ecusol.web.repository.BeneficiarioRepository;
 import com.ecusol.web.repository.UsuarioWebRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 public class BancaWebService {
 
-    @Autowired private CoreBancarioClient coreClient;
-    @Autowired private BeneficiarioRepository beneficiarioRepo;
-    @Autowired private UsuarioWebRepository usuarioWebRepo;
+    @Autowired
+    private CoreBancarioClient coreClient;
+
+    @Autowired
+    private BeneficiarioRepository beneficiarioRepo;
+
+    @Autowired
+    private UsuarioWebRepository usuarioWebRepo;
 
     public List<CuentaWebDTO> misCuentas(Integer clienteIdCore) {
-        return coreClient.obtenerCuentasPorCliente(clienteIdCore).stream()
-                .map(c -> new CuentaWebDTO(
-                        c.getCuentaId().longValue(),
-                        c.getNumeroCuenta(),
-                        c.getSaldo(),
-                        c.getEstado(),
-                        c.getTipoCuentaId().longValue()
-                )).collect(Collectors.toList());
+        try {
+            return coreClient.obtenerCuentasPorCliente(clienteIdCore).stream()
+                    .map(c -> new CuentaWebDTO(
+                            c.getCuentaId().longValue(),
+                            c.getNumeroCuenta(),
+                            c.getSaldo(),
+                            c.getEstado(),
+                            c.getTipoCuentaId().longValue()
+                    ))
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            throw new ResponseStatusException(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "No se pudieron obtener las cuentas en este momento",
+                    e
+            );
+        }
     }
 
-    public List<MovimientoWebDTO> misMovimientos(String cuenta) {
-        var movsCore = coreClient.obtenerMovimientos(cuenta);
-        return movsCore.stream()
-                .map(m -> new MovimientoWebDTO(
-                        m.getFechaEjecucion(),
-                        m.getTipo(),
-                        m.getMonto(),
-                        BigDecimal.ZERO, // Saldo histórico no viene, ponemos 0 o calculamos
-                        m.getDescripcion()
-                ))
-                .collect(Collectors.toList());
+    public List<MovimientoWebDTO> misMovimientos(String numeroCuenta) {
+        try {
+            var movsCore = coreClient.obtenerMovimientos(numeroCuenta);
+            return movsCore.stream()
+                    .map(m -> new MovimientoWebDTO(
+                            m.getFechaEjecucion(),
+                            m.getTipo(),
+                            m.getMonto(),
+                            BigDecimal.ZERO,
+                            m.getDescripcion()
+                    ))
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            throw new ResponseStatusException(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "No se pudieron obtener los movimientos en este momento",
+                    e
+            );
+        }
     }
 
     public String transferir(TransferenciaRequest req) {
-        return coreClient.realizarTransferencia(req);
+        try {
+            return coreClient.realizarTransferencia(req);
+        } catch (ResponseStatusException ex) {
+            throw ex;
+        } catch (Exception e) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_GATEWAY,
+                    "No se pudo procesar la transferencia en el Core Bancario",
+                    e
+            );
+        }
     }
 
-    // --- CORRECCIÓN: Devolver objeto completo ---
     public TitularCuentaDTO validarDestinatarioCompleto(String numeroCuenta) {
         try {
-            return coreClient.validarTitular(numeroCuenta);
+            TitularCuentaDTO titular = coreClient.validarTitular(numeroCuenta);
+
+            if (titular == null) {
+                throw new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "La cuenta destino no existe"
+                );
+            }
+
+            return titular;
+        } catch (ResponseStatusException ex) {
+            throw ex;
         } catch (Exception e) {
-            throw new RuntimeException("Cuenta no existe");
+            throw new ResponseStatusException(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "No se pudo validar la cuenta destino en este momento",
+                    e
+            );
         }
     }
 
@@ -63,16 +112,38 @@ public class BancaWebService {
                 .tipoCuentaId(tipoCuentaId)
                 .saldoInicial(BigDecimal.ZERO)
                 .build();
-        coreClient.crearCuenta(req);
+
+        try {
+            coreClient.crearCuenta(req);
+        } catch (ResponseStatusException ex) {
+            throw ex;
+        } catch (Exception e) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_GATEWAY,
+                    "No se pudo crear la cuenta en el Core Bancario",
+                    e
+            );
+        }
     }
 
     public List<SucursalDTO> obtenerSucursales() {
-        return coreClient.obtenerSucursales();
+        try {
+            return coreClient.obtenerSucursales();
+        } catch (Exception e) {
+            throw new ResponseStatusException(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "No se pudieron obtener las sucursales en este momento",
+                    e
+            );
+        }
     }
 
     public void guardarBeneficiario(Integer usuarioWebId, BeneficiarioDTO dto) {
         UsuarioWeb usuario = usuarioWebRepo.findById(usuarioWebId)
-                .orElseThrow(() -> new RuntimeException("Usuario Web no encontrado"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Usuario Web no encontrado"
+                ));
 
         Beneficiario b = new Beneficiario();
         b.setUsuarioWeb(usuario);
@@ -80,11 +151,9 @@ public class BancaWebService {
         b.setNombreTitular(dto.nombreTitular());
         b.setAlias(dto.alias());
         b.setEmailNotificacion(dto.email());
-
-        // Guardar Tipo de Cuenta correctamente
         b.setTipoCuenta(dto.tipoCuenta() != null ? dto.tipoCuenta() : "Desconocido");
+        b.setFechaRegistro(LocalDateTime.now());
 
-        b.setFechaRegistro(java.time.LocalDateTime.now());
         beneficiarioRepo.save(b);
     }
 

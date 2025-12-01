@@ -1,4 +1,3 @@
-//ubi: src/main/java/com/ecusol/web/config/JwtTokenProvider.java
 package com.ecusol.web.config;
 
 import io.jsonwebtoken.*;
@@ -11,48 +10,70 @@ import java.util.Date;
 @Component
 public class JwtTokenProvider {
 
-    private final SecretKey key = Keys.hmacShaKeyFor(
-            "MiClaveSecretaSuperLarga2025EcuSolBank1234567890abcdef".getBytes());
+    private final SecretKey key;
+
+    public JwtTokenProvider(@Value("${jwt.secret}") String secret) {
+        this.key = Keys.hmacShaKeyFor(secret.getBytes());
+    }
 
     @Value("${jwt.expiration-ms}")
     private long validityInMilliseconds;
 
-    // MODIFICADO: Ahora recibe ambos IDs
     public String createToken(String username, Integer usuarioWebId, Integer clienteIdCore) {
+
         Date now = new Date();
-        Date validity = new Date(now.getTime() + validityInMilliseconds);
+        Date expirationDate = new Date(now.getTime() + validityInMilliseconds);
 
         return Jwts.builder()
                 .subject(username)
-                .claim("id", clienteIdCore)          // ID para el Core
-                .claim("usuarioWebId", usuarioWebId) // ID para la Web
+                .claim("clienteIdCore", clienteIdCore)
+                .claim("usuarioWebId", usuarioWebId)
                 .issuedAt(now)
-                .expiration(validity)
-                .signWith(key)
+                .expiration(expirationDate)
+                .signWith(key, Jwts.SIG.HS256)
                 .compact();
     }
 
     public boolean validateToken(String token) {
         try {
-            Jwts.parser().verifyWith(key).build().parseSignedClaims(token);
+            Jwts.parser()
+                    .verifyWith(key)
+                    .build()
+                    .parseSignedClaims(token);
             return true;
-        } catch (Exception e) { return false; }
+
+        } catch (ExpiredJwtException e) {
+            System.out.println("JWT expirado: " + e.getMessage());
+        } catch (UnsupportedJwtException e) {
+            System.out.println("JWT no soportado: " + e.getMessage());
+        } catch (MalformedJwtException e) {
+            System.out.println("JWT malformado: " + e.getMessage());
+        } catch (SecurityException e) {
+            System.out.println("Firma JWT inválida: " + e.getMessage());
+        } catch (IllegalArgumentException e) {
+            System.out.println("Token vacío o nulo: " + e.getMessage());
+        }
+
+        return false;
     }
 
-    // Obtener ID del Core (Existente)
-    public Long getId(String token) {
-        Claims claims = Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
-        return claims.get("id", Long.class);
+    private Claims getClaims(String token) {
+        return Jwts.parser()
+                .verifyWith(key)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
     }
 
-    // NUEVO: Obtener ID del Usuario Web (El que te faltaba)
+    public Integer getClienteIdCore(String token) {
+        return getClaims(token).get("clienteIdCore", Integer.class);
+    }
+
     public Integer getUsuarioWebId(String token) {
-        Claims claims = Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
-        return claims.get("usuarioWebId", Integer.class);
+        return getClaims(token).get("usuarioWebId", Integer.class);
     }
 
     public String getUsername(String token) {
-        return Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload().getSubject();
+        return getClaims(token).getSubject();
     }
 }
-

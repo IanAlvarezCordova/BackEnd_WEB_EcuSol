@@ -6,45 +6,63 @@ import com.ecusol.web.dto.RegisterRequest;
 import com.ecusol.web.dto.RegistroCoreRequest;
 import com.ecusol.web.model.UsuarioWeb;
 import com.ecusol.web.repository.UsuarioWebRepository;
-import com.ecusol.web.client.CoreBancarioClient; // Importar
+import com.ecusol.web.client.CoreBancarioClient;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Service
 public class AuthService {
 
-    @Autowired private UsuarioWebRepository usuarioRepo;
-    @Autowired private PasswordEncoder passwordEncoder;
-    @Autowired private JwtTokenProvider tokenProvider;
-    @Autowired private CoreBancarioClient coreBancarioClient; // Inyectar
+    @Autowired
+    private UsuarioWebRepository usuarioRepo;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private JwtTokenProvider tokenProvider;
+
+    @Autowired
+    private CoreBancarioClient coreBancarioClient;
 
     public String login(LoginRequest req) {
-        // Nota: req.getUsuario() o req.usuario() según tu DTO. Asumimos clase Lombok.
         UsuarioWeb user = usuarioRepo.findByUsername(req.getUsuario())
-                .orElseThrow(() -> new RuntimeException("Credenciales incorrectas"));
+                .orElseThrow(() ->
+                        new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Credenciales incorrectas"));
 
         if (!passwordEncoder.matches(req.getPassword(), user.getPassword())) {
-            throw new RuntimeException("Credenciales incorrectas");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Credenciales incorrectas");
         }
 
-        // 1. Validación Local (Usuario Web)
-        if (!"ACTIVO".equals(user.getEstado())) {
-            throw new RuntimeException("Usuario Web inactivo. Contacte al banco.");
+        if (!"ACTIVO".equalsIgnoreCase(user.getEstado())) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Usuario Web inactivo. Contacte al banco."
+            );
         }
 
-        // 2. Validación Remota (Cliente Core) - BLOQUEO DE SEGURIDAD
         try {
-            if (!coreBancarioClient.isClienteActivo(user.getClienteIdCore())) {
-                throw new RuntimeException("SU CLIENTE BANCARIO ESTÁ INACTIVO/BLOQUEADO. Por favor acérquese a una agencia.");
+            Boolean clienteActivo = coreBancarioClient.isClienteActivo(user.getClienteIdCore());
+            if (Boolean.FALSE.equals(clienteActivo)) {
+                throw new ResponseStatusException(
+                        HttpStatus.FORBIDDEN,
+                        "Su cliente bancario está inactivo/bloqueado. Por favor acérquese a una agencia."
+                );
             }
+        } catch (ResponseStatusException ex) {
+            throw ex;
         } catch (Exception e) {
-            // Si el error es nuestro mensaje de bloqueo, lo relanzamos
-            if (e.getMessage().contains("INACTIVO")) throw e;
-            // Si es error de red, puedes decidir si bloquear o loguear warning.
-            // Por seguridad bancaria, si no puedo verificar estado, bloqueo.
-            throw new RuntimeException("Error verificando estado bancario. Intente más tarde.");
+            throw new ResponseStatusException(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "Error verificando estado bancario. Intente más tarde.",
+                    e
+            );
         }
 
         user.setUltimoAcceso(LocalDateTime.now());
@@ -59,7 +77,10 @@ public class AuthService {
 
     public void registrar(RegisterRequest req) {
         if (usuarioRepo.existsByUsername(req.usuario())) {
-            throw new RuntimeException("El usuario ya existe");
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "El usuario ya existe"
+            );
         }
 
         RegistroCoreRequest coreReq = RegistroCoreRequest.builder()
@@ -68,14 +89,18 @@ public class AuthService {
                 .apellidos(req.apellidos())
                 .direccion(req.direccion())
                 .telefono(req.telefono())
-                .fechaNacimiento(java.time.LocalDate.of(2000, 1, 1))
+                .fechaNacimiento(LocalDate.of(2000, 1, 1))
                 .build();
 
         Integer idCoreGenerado;
         try {
             idCoreGenerado = coreBancarioClient.crearClientePersona(coreReq);
         } catch (Exception e) {
-            throw new RuntimeException("Error creando cliente en el Core: " + e.getMessage());
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_GATEWAY,
+                    "Error creando cliente en el Core Bancario",
+                    e
+            );
         }
 
         UsuarioWeb u = new UsuarioWeb();
@@ -84,6 +109,7 @@ public class AuthService {
         u.setEmail(req.email());
         u.setClienteIdCore(idCoreGenerado);
         u.setEstado("ACTIVO");
+        u.setFechaRegistro(LocalDateTime.now());
 
         usuarioRepo.save(u);
     }

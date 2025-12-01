@@ -1,9 +1,7 @@
-//ubi: src/main/java/com/ecusol/web/dto/SucursalDTO.java
 package com.ecusol.web.dto;
 import lombok.Data;
 import java.math.BigDecimal;
 
-// Espejo del DTO del Core
 @Data
 public class SucursalDTO {
     private Integer id;

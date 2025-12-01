@@ -1,4 +1,3 @@
-//ubi: src/main/java/com/ecusol/web/dto/BeneficiarioDTO.java
 package com.ecusol.web.dto;
 
 public record BeneficiarioDTO(
@@ -7,5 +6,5 @@ public record BeneficiarioDTO(
         String nombreTitular,
         String alias,
         String email,
-        String tipoCuenta // <--- Agregar
+        String tipoCuenta
 ) {}

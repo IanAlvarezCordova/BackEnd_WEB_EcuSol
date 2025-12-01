@@ -5,26 +5,38 @@ import com.ecusol.web.dto.LoginRequest;
 import com.ecusol.web.dto.RegisterRequest;
 import com.ecusol.web.service.AuthService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
-@RequestMapping("/api/auth")
-@CrossOrigin(origins = "*") // Para desarrollo
+@RequestMapping("/api/v1/auth")
+@CrossOrigin(origins = "*")
 public class AuthController {
 
-    @Autowired private AuthService authService;
+    @Autowired 
+    private AuthService authService;
 
-    @PostMapping("/login/web")
+    @PostMapping("/auth/tokens")
     public ResponseEntity<JwtResponse> login(@RequestBody LoginRequest req) {
-        String token = authService.login(req);
-        // CORRECCIÓN: Usamos .getUsuario() porque LoginRequest ahora es una clase @Data
-        return ResponseEntity.ok(new JwtResponse(token, req.getUsuario()));
+        try {
+            String token = authService.login(req);
+            JwtResponse response = new JwtResponse(token, req.getUsuario());
+            return ResponseEntity.ok(response);
+        } catch (Exception ex) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Credenciales inválidas", ex);
+        }
     }
 
-    @PostMapping("/register")
+    @PostMapping("/users")
     public ResponseEntity<String> register(@RequestBody RegisterRequest req) {
-        authService.registrar(req);
-        return ResponseEntity.ok("Usuario registrado correctamente");
+        try {
+            authService.registrar(req);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body("Usuario registrado correctamente");
+        } catch (Exception ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No se pudo registrar el usuario", ex);
+        }
     }
 }

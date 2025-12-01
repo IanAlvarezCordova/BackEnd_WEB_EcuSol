@@ -1,4 +1,3 @@
-//ubi: src/main/java/com/ecusol/web/client/CoreBancarioClient.java
 package com.ecusol.web.client;
 
 import com.ecusol.web.dto.*;
@@ -32,7 +31,6 @@ public class CoreBancarioClient {
         }
     }
 
-    // CORREGIDO: Usa el DTO simple
     public List<MovimientoCoreDTO> obtenerMovimientos(String numeroCuenta) {
         return webClient.get()
                 .uri("/cuentas/" + numeroCuenta + "/movimientos")
@@ -59,7 +57,7 @@ public class CoreBancarioClient {
 
     public Integer crearClientePersona(RegistroCoreRequest req) {
         return webClient.post()
-                .uri("/clientes/crear-persona")
+                .uri("/clientes")
                 .bodyValue(req)
                 .retrieve()
                 .bodyToMono(Integer.class)
@@ -67,15 +65,19 @@ public class CoreBancarioClient {
     }
 
     public String crearCuenta(CrearCuentaRequest req) {
+        if (req.getClienteId() == null) {
+            throw new IllegalArgumentException("crearCuenta requiere clienteId en el request");
+        }
         return webClient.post()
-                .uri("/clientes/crear-cuenta")
+                .uri(uriBuilder -> uriBuilder
+                .path("/clientes/{clienteId}/cuentas")
+                .build(req.getClienteId()))
                 .bodyValue(req)
                 .retrieve()
                 .bodyToMono(String.class)
                 .block();
     }
 
-    // NUEVO: Obtener sucursales del Core
     public List<SucursalDTO> obtenerSucursales() {
         try { return webClient.get().uri("/sucursales").retrieve().bodyToFlux(SucursalDTO.class).collectList().block(); }
         catch (Exception e) { return List.of(); }
@@ -87,18 +89,17 @@ public class CoreBancarioClient {
         catch (Exception e) { throw new RuntimeException("No se pudo validar el titular"); }
     }
 
-    // NUEVO: Verificar si el cliente está activo en el Core
     public boolean isClienteActivo(Integer clienteIdCore) {
         try {
-            // Llama a: http://localhost:8081/api/core/clientes/{id}/estado-simple
             String estado = webClient.get()
-                    .uri("/clientes/" + clienteIdCore + "/estado-simple")
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/clientes/{id}/estado")
+                            .build(clienteIdCore))
                     .retrieve()
                     .bodyToMono(String.class)
                     .block();
             return "ACTIVO".equalsIgnoreCase(estado);
         } catch (Exception e) {
-            // Si el endpoint no existe (404) o falla la red, retorna false
             return false;
         }
     }

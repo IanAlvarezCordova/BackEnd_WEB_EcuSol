@@ -1,4 +1,3 @@
-//ubi: src/main/java/com/ecusol/web/model/Beneficiario.java
 package com.ecusol.web.model;
 
 import jakarta.persistence.*;
@@ -12,11 +11,11 @@ public class Beneficiario {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "beneficiario_id") // SQL: beneficiario_id (snake_case)
+    @Column(name = "beneficiario_id") 
     private Integer beneficiarioId;
 
-    @ManyToOne(fetch = FetchType.LAZY) // Lazy para evitar logs gigantes
-    @JoinColumn(name = "usuario_web_id", nullable = false) // SQL: usuario_web_id
+    @ManyToOne(fetch = FetchType.LAZY) 
+    @JoinColumn(name = "usuario_web_id", nullable = false) 
     private UsuarioWeb usuarioWeb;
 
     @Column(name = "numero_cuenta_destino", nullable = false)
@@ -25,7 +24,7 @@ public class Beneficiario {
     @Column(name = "nombre_titular", nullable = false)
     private String nombreTitular;
 
-    @Column(name = "tipo_cuenta") // Agregado para integridad
+    @Column(name = "tipo_cuenta") 
     private String tipoCuenta;
 
     @Column(name = "alias")

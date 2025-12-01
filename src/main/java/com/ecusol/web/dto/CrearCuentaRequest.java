@@ -1,4 +1,3 @@
-//ubi: src/main/java/com/ecusol/web/dto/CrearCuentaRequest.java
 package com.ecusol.web.dto;
 import lombok.Builder;
 import lombok.Data;
